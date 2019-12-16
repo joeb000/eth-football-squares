@@ -1,0 +1,33 @@
+{
+  "name": "eth-football",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "deploy-prod": "NETWORK=mainnet node ./deploy/index.js",
+    "deploy": "NETWORK=rinkeby node ./deploy/deploy.js",
+    "dev-deploy": "NETWORK=ganache node ./deploy/deploy.js",
+    "test": "NETWORK=ganache node ./deploy/test.js",
+    "compile": "./untruffle/compile.sh; node ./untruffle/buildContractJSON.js"
+  },
+  "author": "Joe Bernitt",
+  "license": "ISC",
+  "dependencies": {
+    "ethers": "^4.0.27",
+    "ipfs-http-client": "^32.0.1",
+    "module-alias": "^2.2.0"
+  },
+  "devDependencies": {
+    "json-loader": "^0.5.7",
+    "mocha": "^6.1.4",
+    "webpack": "^4.41.0",
+    "webpack-cli": "^3.3.9"
+  },
+  "_moduleAliases": {
+    "@root": ".",
+    "@contracts": "build/contracts",
+    "@deployed": "build/deployed",
+    "@local": "./local",
+    "@utils": "untruffle/utils/index.js"
+  }
+}
