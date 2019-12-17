@@ -107,11 +107,11 @@ contract Football is owned {
         return g.rows;
     }
 
-    function getGameId(address _owner, uint _nonce) public view returns (bytes32) {
+    function getGameId(address _owner, uint _nonce) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_owner, _nonce));
     }
 
-    // solidity implementation of https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle 
+    // solidity implementation of https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
     function shuffle(uint _seed) public pure returns (uint8[10] memory returnArray) {
         uint8 arrayIndex = 0;
         bool[] memory struckPositions = new bool[](10);

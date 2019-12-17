@@ -10,6 +10,10 @@ const main = async () => {
 
     const exampleContract = await deployContractAndWriteToFile('Football', deployAccount, [])
     console.log("contract deployed at address: " + exampleContract.address)
+
+
+    const tokenContract = await deployContractAndWriteToFile('FootballToken', deployAccount, ['FBL','Football Token', 2])
+    console.log("token contract deployed at address: " + tokenContract.address)
 }
 
 
