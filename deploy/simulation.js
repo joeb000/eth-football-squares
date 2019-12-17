@@ -15,7 +15,8 @@ const main = async () => {
     //await printSquares(gameId)
     //await shuffleAndSetWinner(gameId)
     await printBalances()
-    await claimReward(gameId, utils.ethersAccount(2))
+    //await claimReward(gameId, utils.ethersAccount(2))
+    await collectFee()
     await printBalances()
 
 }
@@ -91,6 +92,11 @@ const shuffleAndSetWinner = async (gameId) => {
 
 const claimReward = async (gameId, account) => {
     await utils.callContract(squaresContract, account,'claimReward', [gameId])
+}
+
+const collectFee = async () => {
+    await utils.callContract(squaresContract, mainAccount,'collectFee', [tokenContract.address, mainAccount.address])
+
 }
 
 const printBalances = async () => {
