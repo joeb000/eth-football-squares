@@ -12,8 +12,8 @@ const main = async () => {
     const football = contract.connect(account)
 
     //await football.createGame("joe");
-    // let tx = await football.shuffleGame();
-    // await tx.wait()
+    let tx = await football.resetGame();
+    await tx.wait()
 
     let col = await football.getGameColumns(account.address);
     console.log(col)

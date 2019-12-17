@@ -1,46 +1,80 @@
 pragma solidity ^0.5.0;
 
+import "./token/ERC20/IERC20.sol";
+
 contract Football {
 
+    enum GamePhase { NotAGame, GameOpen, GameLocked, GameCompleted, WinnerPaid }
+
     struct Game {
+        address erc20RewardToken;
+        uint256 squarePrice;
+        uint256 totalPot;
+        GamePhase phase;
         uint8[10] columns;
         uint8[10] rows;
         string meta;
         mapping (uint8 => address) squares;
         address owner;
+        uint8[2] winningColRow; // first value is column index, second value is row index
     }
 
-    mapping (address => Game) public games;
-    // Game public currentGame;
+    mapping (bytes32 => Game) public games;
 
-    uint public testTime;
+    mapping (address => uint256) public nonce;
 
-    function createGame(string memory _meta) public {
+    function createGame(address _rewardToken, uint256 _price, string memory _meta) public {
         Game memory g;
-        games[msg.sender] = g;
-        games[msg.sender].owner = msg.sender;
-        games[msg.sender].meta = _meta;
+        bytes32 gameId = getGameId(msg.sender, nonce[msg.sender]);
+        games[gameId] = g;
+        games[gameId].owner = msg.sender;
+        games[gameId].phase = GamePhase.GameOpen;
+        games[gameId].erc20RewardToken = _rewardToken;
+        games[gameId].squarePrice = _price;
+        games[gameId].meta = _meta;
+        nonce[msg.sender]++;
     }
 
-    function resetGame() public {
-        Game memory g;
-        games[msg.sender] = g;
-    }
-
-    function pickSquare(address _owner, uint8 _column, uint8 _row) public {
-        Game storage g = games[_owner];
+    function pickSquare(bytes32 _gameId, uint8 _column, uint8 _row) public {
+        Game storage g = games[_gameId];
 
         // TODO check bounds
         uint8 choice = rowColumnToInt(_column, _row);
-        require (g.squares[choice]==address(0), "Square already occupied");
+        require(g.phase == GamePhase.GameOpen, "game is not open");
+
+        require(g.squares[choice]==address(0), "Square already occupied");
+
+        require(IERC20(g.erc20RewardToken).transferFrom(msg.sender, address(this), g.squarePrice), "transfer failed");
+        g.totalPot += g.squarePrice;
         g.squares[choice] = msg.sender;
     }
 
-    function shuffleGame() public {
-        testTime = block.timestamp;
-        Game storage g = games[msg.sender];
+    function shuffleGame(bytes32 _gameId) public {
+        Game storage g = games[_gameId];
+        require(g.owner == msg.sender, "not the game owner");
+        require(g.phase == GamePhase.GameOpen, "Game not in open phase");
         g.columns = shuffle(block.timestamp);
         g.rows = shuffle(block.timestamp-1);
+        g.phase = GamePhase.GameLocked;
+    }
+
+
+    function setWinner(bytes32 _gameId, uint8 _colIndex, uint8 _rowIndex) public {
+        Game storage g = games[_gameId];
+        require(g.owner == msg.sender, "not the game owner");
+        require(g.phase == GamePhase.GameLocked, "Game is not locked");
+        g.winningColRow[0] = _colIndex;
+        g.winningColRow[1] = _rowIndex;
+        g.phase = GamePhase.GameCompleted;
+    }
+
+    function claimReward(bytes32 _gameId) public {
+        Game storage g = games[_gameId];
+        require(g.phase == GamePhase.GameCompleted, "Game is not Completed");
+        address winner = getSquare(_gameId, g.winningColRow[0], g.winningColRow[1]);
+        require(msg.sender == winner, "You did not win");
+        require(IERC20(g.erc20RewardToken).transfer(msg.sender, g.totalPot), "winner transfer failed");
+        g.phase = GamePhase.WinnerPaid;
     }
 
     function rowColumnToInt(uint8 column, uint8 row) public pure returns (uint8) {
@@ -48,22 +82,26 @@ contract Football {
         return uint8((lengthOfSide * column) + row);
     }
 
-    function getSquare(address _owner, uint8 _col, uint8 _row) public view returns (address) {
-        Game storage g = games[_owner];
+    function getSquare(bytes32 _gameId, uint8 _col, uint8 _row) public view returns (address) {
+        Game storage g = games[_gameId];
         return g.squares[rowColumnToInt(_col, _row)];
     }
-    function getSquareValue(address _owner, uint8 i) public view returns (address) {
-        Game storage g = games[_owner];
+    function getSquareValue(bytes32 _gameId, uint8 i) public view returns (address) {
+        Game storage g = games[_gameId];
         return g.squares[i];
     }
 
-    function getGameColumns(address _owner) public view returns (uint8[10] memory) {
-        Game storage g = games[_owner];
+    function getGameColumns(bytes32 _gameId) public view returns (uint8[10] memory) {
+        Game storage g = games[_gameId];
         return g.columns;
     }
-    function getGameRows(address _owner) public view returns (uint8[10] memory) {
-        Game storage g = games[_owner];
+    function getGameRows(bytes32 _gameId) public view returns (uint8[10] memory) {
+        Game storage g = games[_gameId];
         return g.rows;
+    }
+
+    function getGameId(address _owner, uint _nonce) public view returns (bytes32) {
+        return keccak256(abi.encodePacked(_owner, _nonce));
     }
 
     // solidity implementation of https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle 
