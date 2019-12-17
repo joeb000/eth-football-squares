@@ -1,8 +1,9 @@
 pragma solidity ^0.5.0;
 
 import "./token/ERC20/IERC20.sol";
+import "./access/ownership/owned.sol";
 
-contract Football {
+contract Football is owned {
 
     enum GamePhase { NotAGame, GameOpen, GameLocked, GameCompleted, WinnerPaid }
 
@@ -73,8 +74,14 @@ contract Football {
         require(g.phase == GamePhase.GameCompleted, "Game is not Completed");
         address winner = getSquare(_gameId, g.winningColRow[0], g.winningColRow[1]);
         require(msg.sender == winner, "You did not win");
-        require(IERC20(g.erc20RewardToken).transfer(msg.sender, g.totalPot), "winner transfer failed");
+        uint256 winnings = g.totalPot * 98 / 100; // -2% fee to the contract creator
+        require(IERC20(g.erc20RewardToken).transfer(msg.sender, winnings), "winner transfer failed");
         g.phase = GamePhase.WinnerPaid;
+    }
+
+    function collectFee(address _token, address _to) public onlyOwner {
+        uint256 bal = IERC20(_token).balanceOf(address(this));
+        require(IERC20(_token).transfer(_to, bal), "transfer failed");
     }
 
     function rowColumnToInt(uint8 column, uint8 row) public pure returns (uint8) {
