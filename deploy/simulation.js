@@ -14,11 +14,16 @@ const main = async () => {
     //await chooseSquares(gameId)
     //await printSquares(gameId)
     //await shuffleAndSetWinner(gameId)
-    await printBalances()
+    //await printBalances()
     //await claimReward(gameId, utils.ethersAccount(2))
-    await collectFee()
-    await printBalances()
+    // await collectFee()
+    // await printBalances()
 
+    let a1 = await squaresContract.getSquare(gameId, 3, 0)
+    let a2 =  await squaresContract.getSquareValue(gameId, 3)
+
+    console.log(a1)
+    console.log(a2)
 }
 
 const initializeToken = async () => {
