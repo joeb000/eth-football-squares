@@ -8,9 +8,12 @@ const tokenContract = utils.getDeployedContract('FootballToken')
 const mainAccount = utils.ethersAccount(0)
 
 const main = async () => {
+    await mintToken();
     //await initializeToken();
-    //let gameId = await initializeGame()
-    let gameId = '0x642a12a804ba73b46993bc72264d1cee70c8a834d890795ee716a1f5826b87ac'
+    let gameId = await initializeGame()
+    //console.log(gameId)
+    //let gameId = '0xf011d6c8c4111bd1779716f10b9183ab985375c1d664dd0a9f09eaa9f82c6f7d'
+    await chooseSquare(gameId, 0,3)
     //await chooseSquares(gameId)
     //await printSquares(gameId)
     //await shuffleAndSetWinner(gameId)
@@ -19,13 +22,22 @@ const main = async () => {
     // await collectFee()
     // await printBalances()
 
-    let a1 = await squaresContract.getSquare(gameId, 3, 0)
+    let a1 = await squaresContract.getSquare(gameId, 0, 3)
     let a2 =  await squaresContract.getSquareValue(gameId, 3)
 
     console.log(a1)
     console.log(a2)
 }
 
+const mintToken = async () => {
+    let contract = tokenContract.connect(mainAccount);
+    let beforeBal = await contract.balanceOf(mainAccount.address);
+    await contract.mint(mainAccount.address, 10000)
+    await  utils.callContract(tokenContract,mainAccount,'approve', [squaresContract.address, 100000])
+
+    let afterBal = await contract.balanceOf(mainAccount.address);
+    console.log("Before: " + beforeBal + " after: " + afterBal)
+}
 const initializeToken = async () => {
     let contract = tokenContract.connect(mainAccount);
 
@@ -36,7 +48,7 @@ const initializeToken = async () => {
     for (let i = 0; i < 10; i++) {
         const account = utils.ethersAccount(i);
         const addr = account.address
-        //await contract.mint(addr, 1000)
+        await contract.mint(addr, 1000)
         await  utils.callContract(tokenContract,account,'approve', [squaresContract.address, 100000])
     }
 
@@ -49,7 +61,7 @@ const initializeToken = async () => {
 const initializeGame = async () => {
     let nonce = await squaresContract.nonce(mainAccount.address);
     console.log("nonce", nonce)
-    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 5, "dummyMeta"])
+    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, "The best game"])
     let gameID = await squaresContract.getGameId(mainAccount.address, nonce);
     console.log("Game ID: " + gameID)
 
@@ -65,6 +77,11 @@ const chooseSquares = async (gameId) => {
             await utils.callContract(squaresContract,account,'pickSquare', [gameId, j,i])
         }
     }
+}
+const chooseSquare = async (gameId, col, row) => {
+
+    await utils.callContract(squaresContract,mainAccount,'pickSquare', [gameId, col, row])
+
 }
 
 const printSquares = async (gameId) => {

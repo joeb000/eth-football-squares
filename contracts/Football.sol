@@ -17,6 +17,7 @@ contract Football is owned {
         string meta;
         mapping (uint8 => address) squares;
         address owner;
+        address winner;
         uint8[2] winningColRow; // first value is column index, second value is row index
     }
 
@@ -25,29 +26,33 @@ contract Football is owned {
     mapping (address => uint256) public nonce;
 
     function createGame(address _rewardToken, uint256 _price, string memory _meta) public {
-        Game memory g;
         bytes32 gameId = getGameId(msg.sender, nonce[msg.sender]);
-        games[gameId] = g;
         games[gameId].owner = msg.sender;
         games[gameId].phase = GamePhase.GameOpen;
         games[gameId].erc20RewardToken = _rewardToken;
         games[gameId].squarePrice = _price;
         games[gameId].meta = _meta;
         nonce[msg.sender]++;
+        emit GameCreated(msg.sender, gameId, _rewardToken, _meta);
     }
 
-    function pickSquare(bytes32 _gameId, uint8 _column, uint8 _row) public {
+    function pickSquareValue(bytes32 _gameId, uint8 _value) public {
         Game storage g = games[_gameId];
 
-        // TODO check bounds
-        uint8 choice = rowColumnToInt(_column, _row);
         require(g.phase == GamePhase.GameOpen, "game is not open");
 
-        require(g.squares[choice]==address(0), "Square already occupied");
+        require(g.squares[_value]==address(0), "Square already occupied");
 
         require(IERC20(g.erc20RewardToken).transferFrom(msg.sender, address(this), g.squarePrice), "transfer failed");
         g.totalPot += g.squarePrice;
-        g.squares[choice] = msg.sender;
+        g.squares[_value] = msg.sender;
+        emit SquarePicked(msg.sender, _gameId, _value);
+    }
+
+    function pickSquare(bytes32 _gameId, uint8 _column, uint8 _row) public {
+        // TODO check bounds
+        uint8 choice = rowColumnToInt(_column, _row);
+        pickSquareValue(_gameId, choice);
     }
 
     function shuffleGame(bytes32 _gameId) public {
@@ -60,13 +65,15 @@ contract Football is owned {
     }
 
 
-    function setWinner(bytes32 _gameId, uint8 _colIndex, uint8 _rowIndex) public {
+    function setWinner(bytes32 _gameId, uint8 _rowIndex, uint8 _colIndex) public {
         Game storage g = games[_gameId];
         require(g.owner == msg.sender, "not the game owner");
         require(g.phase == GamePhase.GameLocked, "Game is not locked");
         g.winningColRow[0] = _colIndex;
         g.winningColRow[1] = _rowIndex;
         g.phase = GamePhase.GameCompleted;
+        address winner = getSquare(_gameId, g.winningColRow[0], g.winningColRow[1]);
+        emit WinnerSet(_gameId, winner);
     }
 
     function claimReward(bytes32 _gameId) public {
@@ -77,6 +84,7 @@ contract Football is owned {
         uint256 winnings = g.totalPot * 98 / 100; // -2% fee to the contract creator
         require(IERC20(g.erc20RewardToken).transfer(msg.sender, winnings), "winner transfer failed");
         g.phase = GamePhase.WinnerPaid;
+        emit RewardClaimed(_gameId, winner, g.erc20RewardToken, winnings);
     }
 
     function collectFee(address _token, address _to) public onlyOwner {
@@ -84,15 +92,16 @@ contract Football is owned {
         require(IERC20(_token).transfer(_to, bal), "transfer failed");
     }
 
-    function rowColumnToInt(uint8 column, uint8 row) public pure returns (uint8) {
+    function rowColumnToInt(uint8 row, uint8 column) public pure returns (uint8) {
         int lengthOfSide = 10;
-        return uint8((lengthOfSide * column) + row);
+        return uint8((lengthOfSide * row) + column);
     }
 
     function getSquare(bytes32 _gameId, uint8 _col, uint8 _row) public view returns (address) {
         Game storage g = games[_gameId];
         return g.squares[rowColumnToInt(_col, _row)];
     }
+
     function getSquareValue(bytes32 _gameId, uint8 i) public view returns (address) {
         Game storage g = games[_gameId];
         return g.squares[i];
@@ -129,4 +138,9 @@ contract Football is owned {
             arrayIndex++;
         }
     }
+
+    event GameCreated(address indexed owner, bytes32 gameId, address indexed token, string metadata);
+    event WinnerSet(bytes32 gameId, address indexed winner);
+    event RewardClaimed(bytes32 gameId, address indexed winner, address token, uint256 reward);
+    event SquarePicked(address indexed picker, bytes32 gameId, uint8 squareIndex);
 }
