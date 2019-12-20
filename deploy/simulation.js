@@ -61,7 +61,7 @@ const initializeToken = async () => {
 const initializeGame = async () => {
     let nonce = await squaresContract.nonce(mainAccount.address);
     console.log("nonce", nonce)
-    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, "The best game"])
+    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, "Game game"])
     let gameID = await squaresContract.getGameId(mainAccount.address, nonce);
     console.log("Game ID: " + gameID)
 

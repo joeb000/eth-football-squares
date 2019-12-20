@@ -8,15 +8,29 @@ let deployAccount = utils.ethersAccount(0)
 const main = async () => {
     console.log('deploying contracts...')
 
-    const exampleContract = await deployContractAndWriteToFile('Football', deployAccount, [])
-    console.log("contract deployed at address: " + exampleContract.address)
-
-
-    const tokenContract = await deployContractAndWriteToFile('FootballToken', deployAccount, ['FBL','Football Token', 2])
-    console.log("token contract deployed at address: " + tokenContract.address)
+  let tokenAddress = "0xa7d5A6834054941e82E7229Eff7151A6c6e7F0d1"
+  await deployFaucet(tokenAddress)
 }
 
+const deployFootball = async () => {
+  const fbContract = await deployContractAndWriteToFile('Football', deployAccount, [])
+  console.log("contract deployed at address: " + fbContract.address)
+  return fbContract
+}
 
+const deployToken = async () => {
+  const tokenContract = await deployContractAndWriteToFile('FootballToken', deployAccount, ['FBL','Football Token', 2])
+  console.log("token contract deployed at address: " + tokenContract.address)
+  return tokenContract
+}
+
+const deployFaucet = async (tokenAddress) => {
+  const faucetContract = await deployContractAndWriteToFile('Faucet', deployAccount, [])
+  console.log("Faucet contract deployed at address: " + faucetContract.address)
+
+  await utils.callContract(faucetContract,deployAccount,"set",[tokenAddress, 1000])
+
+}
 
 const deployContractAndWriteToFile = async (contractName, deployerWallet, params) => {
     //check if output dir exists, if not create it

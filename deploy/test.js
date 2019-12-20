@@ -6,25 +6,15 @@ const ethers = require('ethers')
 const account = utils.ethersAccount(0)
 const redeemer = utils.ethersAccount(1)
 
-const contract = utils.getDeployedContract('Football')
+const contract = utils.getDeployedContract('FootballToken')
 
 const main = async () => {
-    const football = contract.connect(account)
 
-    //await football.createGame("joe");
-    let tx = await football.resetGame();
-    await tx.wait()
-
-    let col = await football.getGameColumns(account.address);
-    console.log(col)
-    let rows = await football.getGameRows(account.address);
-    console.log(rows)
-    // await football.pickSquare(0,5);
-    // await football.pickSquare(5,5);
+    let faucetAddress = "0x34319CE659D0642a7C076d0115E0719704E56568"
+    const token = contract.connect(account)
+    await token.mint(faucetAddress, ethers.utils.bigNumberify('10000000000000000000000000000'))
 
 
-    //let square = await football.getSquare(2,0);
-    //console.log(square)
 }
 
 const createAndSignCertificates = async (n) => {

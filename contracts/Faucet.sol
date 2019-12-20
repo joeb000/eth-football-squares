@@ -5,6 +5,8 @@ import "./access/ownership/owned.sol";
 
 contract Faucet is owned {
 
+    mapping (address => bool) public tapped;
+
     address public erc20TokenAddress;
     uint256 public amount;
 
@@ -14,7 +16,9 @@ contract Faucet is owned {
     }
 
     function tap() public {
+        require(!tapped[msg.sender], "Already tapped");
         require(IERC20(erc20TokenAddress).transfer(msg.sender, amount),"transfer failed");
+        tapped[msg.sender] = true;
     }
 
     function remaining() public view returns (uint256) {
