@@ -11,6 +11,7 @@ contract Football is owned {
         address erc20RewardToken;
         uint256 squarePrice;
         uint256 totalPot;
+        uint256 startDateTime; //unix timestamp
         GamePhase phase;
         uint8[10] columns;
         uint8[10] rows;
@@ -21,16 +22,19 @@ contract Football is owned {
         uint8[2] winningColRow; // first value is column index, second value is row index
     }
 
+    uint256 public REFUND_AFTER_TIME_PERIOD = 3 days;
+
     mapping (bytes32 => Game) public games;
 
     mapping (address => uint256) public nonce;
 
-    function createGame(address _rewardToken, uint256 _price, string memory _meta) public {
+    function createGame(address _rewardToken, uint256 _price, uint256 _date, string memory _meta) public {
         bytes32 gameId = getGameId(msg.sender, nonce[msg.sender]);
         games[gameId].owner = msg.sender;
         games[gameId].phase = GamePhase.GameOpen;
         games[gameId].erc20RewardToken = _rewardToken;
         games[gameId].squarePrice = _price;
+        games[gameId].startDateTime = _date;
         games[gameId].meta = _meta;
         nonce[msg.sender]++;
         emit GameCreated(msg.sender, gameId, _rewardToken, _meta);
@@ -38,15 +42,23 @@ contract Football is owned {
 
     function pickSquareValue(bytes32 _gameId, uint8 _value) public {
         Game storage g = games[_gameId];
-
         require(g.phase == GamePhase.GameOpen, "game is not open");
-
         require(g.squares[_value]==address(0), "Square already occupied");
-
         require(IERC20(g.erc20RewardToken).transferFrom(msg.sender, address(this), g.squarePrice), "transfer failed");
         g.totalPot += g.squarePrice;
         g.squares[_value] = msg.sender;
         emit SquarePicked(msg.sender, _gameId, _value);
+    }
+
+    function pickMultipleSquares(bytes32 _gameId, uint8[] memory _values) public {
+        Game storage g = games[_gameId];
+        require(g.phase == GamePhase.GameOpen, "game is not open");
+        for (uint8 i = 0; i < _values.length; i++) {
+            require(g.squares[_values[i]]==address(0), "Square already occupied");
+            g.totalPot += g.squarePrice;
+            g.squares[_values[i]] = msg.sender;
+            emit SquarePicked(msg.sender, _gameId, _values[i]);
+        }
     }
 
     function pickSquare(bytes32 _gameId, uint8 _column, uint8 _row) public {
@@ -87,6 +99,7 @@ contract Football is owned {
         emit RewardClaimed(_gameId, winner, g.erc20RewardToken, winnings);
     }
 
+
     function collectFee(address _token, address _to) public onlyOwner {
         uint256 bal = IERC20(_token).balanceOf(address(this));
         require(IERC20(_token).transfer(_to, bal), "transfer failed");
@@ -114,6 +127,13 @@ contract Football is owned {
     function getGameRows(bytes32 _gameId) public view returns (uint8[10] memory) {
         Game storage g = games[_gameId];
         return g.rows;
+    }
+
+    function getGameSquareValues(bytes32 _gameId) public view returns (address[100] memory values) {
+        Game storage g = games[_gameId];
+        for (uint8 i = 0; i < 100; i++) {
+            values[i] = g.squares[i];
+        }
     }
 
     function getGameId(address _owner, uint _nonce) public pure returns (bytes32) {

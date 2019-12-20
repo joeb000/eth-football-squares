@@ -7,7 +7,8 @@ let deployAccount = utils.ethersAccount(0)
 
 const main = async () => {
     console.log('deploying contracts...')
-
+  await deployFootball()
+  
   let tokenAddress = "0xa7d5A6834054941e82E7229Eff7151A6c6e7F0d1"
   await deployFaucet(tokenAddress)
 }

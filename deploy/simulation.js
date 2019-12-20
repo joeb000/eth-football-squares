@@ -8,25 +8,20 @@ const tokenContract = utils.getDeployedContract('FootballToken')
 const mainAccount = utils.ethersAccount(0)
 
 const main = async () => {
-    await mintToken();
-    //await initializeToken();
+    //await mintToken();
+    await initializeToken();
     let gameId = await initializeGame()
-    //console.log(gameId)
+    console.log(gameId)
     //let gameId = '0xf011d6c8c4111bd1779716f10b9183ab985375c1d664dd0a9f09eaa9f82c6f7d'
-    await chooseSquare(gameId, 0,3)
-    //await chooseSquares(gameId)
-    //await printSquares(gameId)
+    //await chooseSquare(gameId, 0,3)
+    await chooseSquares(gameId)
+    await printSquares2(gameId)
     //await shuffleAndSetWinner(gameId)
     //await printBalances()
     //await claimReward(gameId, utils.ethersAccount(2))
     // await collectFee()
-    // await printBalances()
+     await printBalances()
 
-    let a1 = await squaresContract.getSquare(gameId, 0, 3)
-    let a2 =  await squaresContract.getSquareValue(gameId, 3)
-
-    console.log(a1)
-    console.log(a2)
 }
 
 const mintToken = async () => {
@@ -61,7 +56,9 @@ const initializeToken = async () => {
 const initializeGame = async () => {
     let nonce = await squaresContract.nonce(mainAccount.address);
     console.log("nonce", nonce)
-    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, "Game game"])
+    let day = 60*60*24
+    let d = Date.now() + day
+    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, d, "Game game"])
     let gameID = await squaresContract.getGameId(mainAccount.address, nonce);
     console.log("Game ID: " + gameID)
 
@@ -73,9 +70,11 @@ const initializeGame = async () => {
 const chooseSquares = async (gameId) => {
     for (let i = 0; i < 10; i++) {
         const account = utils.ethersAccount(i);
-        for (let j = 0; j < 10; j++) {
-            await utils.callContract(squaresContract,account,'pickSquare', [gameId, j,i])
+        let addArr = []
+        for (let j = (10*i); j < (10*i)+9; j++) {
+            addArr.push(j)
         }
+        await utils.callContract(squaresContract,account,'pickMultipleSquares', [gameId, addArr])
     }
 }
 const chooseSquare = async (gameId, col, row) => {
@@ -95,6 +94,11 @@ const printSquares = async (gameId) => {
     }
     console.log(rows)
 }
+const printSquares2 = async (gameId) => {
+    let s = await squaresContract.getGameSquareValues(gameId)
+    console.log(s)
+}
+
 
 const shuffleAndSetWinner = async (gameId) => {
     //await utils.callContract(squaresContract,mainAccount,'shuffleGame', [gameId])
