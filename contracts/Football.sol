@@ -19,7 +19,7 @@ contract Football is owned {
         mapping (uint8 => address) squares;
         address owner;
         address winner;
-        uint8[2] winningColRow; // first value is column index, second value is row index
+        uint8 winningSquareNumber; // first value is column index, second value is row index
     }
 
     uint256 public REFUND_AFTER_TIME_PERIOD = 3 days;
@@ -36,6 +36,8 @@ contract Football is owned {
         games[gameId].squarePrice = _price;
         games[gameId].startDateTime = _date;
         games[gameId].meta = _meta;
+        games[gameId].winningSquareNumber = uint8(255); //ensure that no valid square is winner
+
         nonce[msg.sender]++;
         emit GameCreated(msg.sender, gameId, _rewardToken, _meta);
     }
@@ -77,21 +79,20 @@ contract Football is owned {
     }
 
 
-    function setWinner(bytes32 _gameId, uint8 _rowIndex, uint8 _colIndex) public {
+    function setWinner(bytes32 _gameId, uint8 _square) public {
         Game storage g = games[_gameId];
         require(g.owner == msg.sender, "not the game owner");
         require(g.phase == GamePhase.GameLocked, "Game is not locked");
-        g.winningColRow[0] = _colIndex;
-        g.winningColRow[1] = _rowIndex;
         g.phase = GamePhase.GameCompleted;
-        address winner = getSquare(_gameId, g.winningColRow[0], g.winningColRow[1]);
+        g.winningSquareNumber = _square;
+        address winner = getSquareValue(_gameId, _square);
         emit WinnerSet(_gameId, winner);
     }
 
     function claimReward(bytes32 _gameId) public {
         Game storage g = games[_gameId];
         require(g.phase == GamePhase.GameCompleted, "Game is not Completed");
-        address winner = getSquare(_gameId, g.winningColRow[0], g.winningColRow[1]);
+        address winner = getSquareValue(_gameId, g.winningSquareNumber);
         require(msg.sender == winner, "You did not win");
         uint256 winnings = g.totalPot * 98 / 100; // -2% fee to the contract creator
         require(IERC20(g.erc20RewardToken).transfer(msg.sender, winnings), "winner transfer failed");
@@ -99,6 +100,26 @@ contract Football is owned {
         emit RewardClaimed(_gameId, winner, g.erc20RewardToken, winnings);
     }
 
+    //allow refund if winner is 0x0 AND if a threshold of time has passed since the game ended
+    //TODO make sure this can't be gamed
+    function claimRefund(bytes32 _gameId, uint8[] memory _ownedSquares) public {
+        Game storage g = games[_gameId];
+
+        //require GameCompleted OR amount of time has passed
+        require(g.phase == GamePhase.GameCompleted || now > g.startDateTime * REFUND_AFTER_TIME_PERIOD, "Game is not over");
+        //require address = 0
+        address winner = getSquareValue(_gameId, g.winningSquareNumber);
+        require(winner==address(0), "Address is not empty");
+
+        for (uint8 i = 0; i < _ownedSquares.length; i++) {
+            require(getSquareValue(_gameId, _ownedSquares[i]) == msg.sender, "Not sender's square");
+        }
+
+        //transfer refund
+        uint256 refund = _ownedSquares.length * g.squarePrice;
+        require(IERC20(g.erc20RewardToken).transfer(msg.sender, refund), "refund transfer failed");
+
+    }
 
     function collectFee(address _token, address _to) public onlyOwner {
         uint256 bal = IERC20(_token).balanceOf(address(this));

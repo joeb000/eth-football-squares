@@ -8,19 +8,20 @@ const tokenContract = utils.getDeployedContract('FootballToken')
 const mainAccount = utils.ethersAccount(0)
 
 const main = async () => {
+    console.log("Token Contract: " + tokenContract.address)
     //await mintToken();
-    await initializeToken();
-    let gameId = await initializeGame()
-    console.log(gameId)
-    //let gameId = '0xf011d6c8c4111bd1779716f10b9183ab985375c1d664dd0a9f09eaa9f82c6f7d'
+    //await initializeToken();
+    //let gameId = await initializeGame()
+    //console.log(gameId)
+    let gameId = '0x3f69f3345613efd10d8787c53899e5f70231476b7740593955700ac8d0937773'
     //await chooseSquare(gameId, 0,3)
-    await chooseSquares(gameId)
+    await chooseMultiple(gameId)
     await printSquares2(gameId)
     //await shuffleAndSetWinner(gameId)
     //await printBalances()
     //await claimReward(gameId, utils.ethersAccount(2))
     // await collectFee()
-     await printBalances()
+    await printBalances()
 
 }
 
@@ -58,7 +59,8 @@ const initializeGame = async () => {
     console.log("nonce", nonce)
     let day = 60*60*24
     let d = Date.now() + day
-    await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 10, d, "Game game"])
+    let tx = await utils.callContract(squaresContract,mainAccount,'createGame', [tokenContract.address, 7, d, "A game"])
+    console.log(tx)
     let gameID = await squaresContract.getGameId(mainAccount.address, nonce);
     console.log("Game ID: " + gameID)
 
@@ -77,6 +79,14 @@ const chooseSquares = async (gameId) => {
         await utils.callContract(squaresContract,account,'pickMultipleSquares', [gameId, addArr])
     }
 }
+
+const chooseMultiple = async (gameId) => {
+    await  utils.callContract(tokenContract,mainAccount,'approve', [squaresContract.address, 100000])
+
+    await utils.callContract(squaresContract,mainAccount,'pickMultipleSquares', [gameId, [10,11,12,13,14,15,16,17,18,19,20]])
+
+}
+
 const chooseSquare = async (gameId, col, row) => {
 
     await utils.callContract(squaresContract,mainAccount,'pickSquare', [gameId, col, row])

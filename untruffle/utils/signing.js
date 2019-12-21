@@ -21,7 +21,7 @@ const callContract = async (contract, wallet, funcName, contractParams) => {
     try {
         const contractWithSigner = contract.connect(wallet);
         const tx = await contractWithSigner.functions[funcName](
-            ...contractParams, { gasLimit: 6000000 }
+            ...contractParams
         );
         await tx.wait();
         return tx;
